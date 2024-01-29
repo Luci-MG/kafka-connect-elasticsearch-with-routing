@@ -173,21 +173,67 @@ public class DataConverter {
     payload = maybeAddTimestamp(payload, record.timestamp());
 
     // index
+    String routing = null;
+    if (config.getRoutingFieldNameConfig() != null) {
+      routing = getRoutingValueFromRecord(record);
+    }
     switch (config.writeMethod()) {
       case UPSERT:
+        //        if (routing == null || !routing.isEmpty()) {
+        //          return new UpdateRequest(index, id)
+        //                  .doc(payload, XContentType.JSON)
+        //                  .upsert(payload, XContentType.JSON)
+        //                  .retryOnConflict(Math.min(config.maxInFlightRequests(), 5));
+        //        }
         return new UpdateRequest(index, id)
             .doc(payload, XContentType.JSON)
             .upsert(payload, XContentType.JSON)
+            .routing(routing)
             .retryOnConflict(Math.min(config.maxInFlightRequests(), 5));
       case INSERT:
         OpType opType = config.isDataStream() ? OpType.CREATE : OpType.INDEX;
+        //        if (routing == null || !routing.isEmpty()) {
+        //          return maybeAddExternalVersioning(
+        //                  new IndexRequest(index).id(id).source(payload, XContentType.JSON)
+        //                  .opType(opType), record
+        //          );
+        //        }
         return maybeAddExternalVersioning(
-            new IndexRequest(index).id(id).source(payload, XContentType.JSON).opType(opType),
+            new IndexRequest(index).id(id).routing(routing)
+                    .source(payload, XContentType.JSON).opType(opType),
             record
         );
       default:
         return null; // shouldn't happen
     }
+  }
+
+  private String getRoutingValueFromRecord(SinkRecord record) {
+    return getFieldValueFromRecord(record, config.getRoutingFieldNameConfig()).toString();
+  }
+
+  private static Object getFieldValueFromRecord(Object structOrMap, String fieldName) {
+    Object field;
+    if (structOrMap instanceof Struct) {
+      field = ((Struct) structOrMap).get(fieldName);
+    } else if (structOrMap instanceof Map) {
+      field = ((Map<?, ?>) structOrMap).get(fieldName);
+      if (field == null) {
+        throw new DataException(String.format("Unable to find field '%s'", fieldName));
+      }
+      return field;
+    } else {
+      throw new DataException(String.format(
+              "Argument not a Struct or Map. Cannot get field '%s' from %s.",
+              fieldName,
+              structOrMap
+      ));
+    }
+    if (field == null) {
+      throw new DataException(
+              String.format("The field '%s' does not exist in %s.", fieldName, structOrMap));
+    }
+    return field;
   }
 
   private String getPayload(SinkRecord record) {
