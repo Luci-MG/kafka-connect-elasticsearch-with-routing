@@ -209,7 +209,14 @@ public class DataConverter {
   }
 
   private String getRoutingValueFromRecord(SinkRecord record) {
-    return getFieldValueFromRecord(record, config.getRoutingFieldNameConfig()).toString();
+    StringBuilder finalRoutingValueBuilder = new StringBuilder();
+    for (String fieldName : config.getRoutingFieldNameConfig().split(","))  {
+      finalRoutingValueBuilder.append(getFieldValueFromRecord(record, fieldName)).append("_");
+    }
+    if (finalRoutingValueBuilder.length() > 0) {
+      finalRoutingValueBuilder.deleteCharAt(finalRoutingValueBuilder.length() - 1);
+    }
+    return finalRoutingValueBuilder.toString();
   }
 
   private static Object getFieldValueFromRecord(Object structOrMap, String fieldName) {
