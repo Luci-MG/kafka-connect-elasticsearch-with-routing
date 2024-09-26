@@ -382,6 +382,8 @@ public class ElasticsearchSinkConnectorConfig extends AbstractConfig {
   private static final String SSL_GROUP = "Security";
   private static final String KERBEROS_GROUP = "Kerberos";
   private static final String DATA_STREAM_GROUP = "Data Stream";
+  private static final String ROUTING_FIELD_NAMES_CONFIG = "routing.field.names.config";
+  private static final String ROUTING_FIELD_NAME_DOC = "Which fields should be used for routing";
 
   public enum BehaviorOnMalformedDoc {
     IGNORE,
@@ -719,6 +721,11 @@ public class ElasticsearchSinkConnectorConfig extends AbstractConfig {
             Width.SHORT,
             WRITE_METHOD_DISPLAY,
             new EnumRecommender<>(WriteMethod.class)
+        ).define(
+            ROUTING_FIELD_NAMES_CONFIG,
+            Type.STRING,
+            Importance.LOW,
+            ROUTING_FIELD_NAME_DOC
     );
   }
 
@@ -1032,6 +1039,10 @@ public class ElasticsearchSinkConnectorConfig extends AbstractConfig {
 
   public long retryBackoffMs() {
     return getLong(RETRY_BACKOFF_MS_CONFIG);
+  }
+
+  public String getRoutingFieldNameConfig() {
+    return getString(ROUTING_FIELD_NAMES_CONFIG);
   }
 
   private SecurityProtocol securityProtocol() {
